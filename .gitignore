@@ -1,40 +1,213 @@
+# Byte-compiled / optimized / DLL files
 *.egg-info
-*.pyc
+*.py[cod]
+*$py.class
 *.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
 .coverage
-.eggs
-.idea
-.mypy_cache
-.vscode
-/build
-/dist
-/docs/_build
-temp
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# pyenv
+.python-version
+
+# pipenv
+Pipfile.lock
+
+# PEP 582
+__pypackages__/
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# SageMath parsed files
+*.sage.py
+
 # Environments
 .env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 .venv
 env/
 venv/
 ENV/
 env.bak/
 venv.bak/
-ssl_certs/localhost.crt
-ssl_certs/localhost.key
+my_env/
 
-**/sample_output.mp4
-results
+# Spyder project settings
+.spyderproject
+.spyproject
 
-/sync*.sh
-models/MiniCPM-o-2_6*
-models/iic
-models
-resource/audio
-resource/avatar/*
-!resource/avatar/put_avatar_here.txt
+# Rope project settings
+.ropeproject
 
+# mkdocs documentation
+/site
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Pyre type checker
+.pyre/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific files
+temp/
+temporal/
+results/
+exp/
+logs/
+*.log
+project.log
 dump_talk_audio.pcm
 dump_avatar_audio.pcm
-exp/
-uv.lock
-logs/
 .lock
+
+# SSL certificates
+ssl_certs/*.crt
+ssl_certs/*.key
+!ssl_certs/*.example
+!ssl_certs/README.md
+
+# Models and weights (very large files)
+models/*.pth
+models/*.pt
+models/*.ckpt
+models/*.h5
+models/*.bin
+models/*.safetensors
+models/MiniCPM-o-2_6*
+models/iic/
+models/wav2vec2-*
+models/LAM_audio2exp/
+models/musetalk/
+models/bharti-*
+models/cosyvoice-*
+models/speech_*
+
+# Cache and temporary directories
+.cache/
+.cache*/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Resource files
+resource/audio/
+resource/avatar/*
+!resource/avatar/put_avatar_here.txt
+!resource/avatar/.gitkeep
+
+# Output files
+**/sample_output.*
+**/*.mp4
+**/*.wav
+**/*.mp3
+**/*.pcm
+
+# UV package manager
+uv.lock
+
+# Docker
+.dockerignore-bak
+
+# Sync scripts
+/sync*.sh
+
+# Runtime files
+*.pid
+*.sock
+*.sem

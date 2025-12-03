@@ -31,8 +31,8 @@ default:
         enabled: True
         module: tts/bailian_tts/tts_handler_cosyvoice_bailian
         voice: "longxiaochun"
-        model_name: "cosyvoice-v1"
-        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+        model_name: "cosyvoice-v3-flash"
+        api_key: "sk-21172643eac945e1a71a154221c295a0" # default=os.getenv("DASHSCOPE_API_KEY")
       LLMOpenAICompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
@@ -44,10 +44,11 @@ default:
         api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
         # api_url: 'http://127.0.0.1:11434/v1' # ollama
         # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
-        # api_key: "" # default=os.getenv("DASHSCOPE_API_KEY")
+        api_key: "sk-21172643eac945e1a71a154221c295a0" # default=os.getenv("DASHSCOPE_API_KEY")
       LiteAvatar:
         module: avatar/liteavatar/avatar_handler_liteavatar
-        avatar_name: 20250408/sample_data
+        #avatar_name: 20250408/sample_data 
+        avatar_name: "20250612/P1rcvIW8H6kvcYWNkEnBWPfg"
         fps: 25
         debug: false
         enable_fast_mode: false
