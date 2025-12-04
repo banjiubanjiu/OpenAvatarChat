@@ -51,6 +51,9 @@ default:
         api_key: "sk-21172643eac945e1a71a154221c295a0"
         source_lang: "Chinese"
         target_lang: "English"
+        # 语义级纠偏：先用通用 LLM 纠正中文句子，再交给 Qwen-MT 翻译
+        enable_semantic_correction: true
+        correction_model_name: "qwen-flash"
       LLMOpenAICompatible:
         enabled: false
         module: llm/openai_compatible/llm_handler_openai_compatible
