@@ -32,6 +32,8 @@ dependencies = [
     "torchvision",
     "torchaudio",
     "python-dotenv>=1.1.0",
+    "websocket-client>=1.6.0",
+    "dashscope>=1.25.2",
 ]
 
 [tool.uv.workspace]
@@ -44,6 +46,7 @@ members = [
     "src/handlers/vad/silerovad",
     "src/handlers/tts/bailian_tts",
     "src/handlers/asr/sensevoice",
+    "src/handlers/asr/qwen3_asr_flash",
     "src/handlers/avatar/musetalk",
 ]
 

@@ -1,6 +1,6 @@
 default:
   logger:
-    log_level: "DEBUG"
+    log_level: "INFO"
   service:
     host: "0.0.0.0"
     port: 8282
@@ -24,10 +24,16 @@ default:
         end_delay: 3000
         buffer_look_back: 3000
         speech_padding: 256
-      SenseVoice:
+      Qwen3ASR:
         enabled: True
-        module: asr/sensevoice/asr_handler_sensevoice
-        model_name: "iic/SenseVoiceSmall"
+        module: asr/qwen3_asr_flash/asr_handler_qwen3_asr_flash
+        api_key: "sk-21172643eac945e1a71a154221c295a0" # default=os.getenv("DASHSCOPE_API_KEY")
+        model_name: "qwen3-asr-flash"
+        base_url: "https://dashscope.aliyuncs.com/api/v1"  # 北京地域API基础URL
+        sample_rate: 16000
+        language: "zh"
+        enable_itn: true  # 数字转文字
+        stream: true     # 启用流式输出，支持更早出字从而实现对话打断
       CosyVoice:
         enabled: True
         module: tts/bailian_tts/tts_handler_cosyvoice_bailian
@@ -37,19 +43,18 @@ default:
       LLMOpenAICompatible:
         enabled: True
         module: llm/openai_compatible/llm_handler_openai_compatible
+        # 主文本/多模态模型
         model_name: "qwen-vl-plus"
+        # 路由配置：使用 tongyi-intent-detect-v3 决定是否需要看图像
+        router_enabled: true
+        router_model_name: "tongyi-intent-detect-v3"
+        # 区分文本/多模态使用的具体模型
+        text_model_name: "qwen-plus"      # 纯文本对话
+        vision_model_name: "qwen-vl-plus" # 需要看图像的多模态对话
         enable_video_input: True # ensure your llm support video input
         history_length: 20
-        # model_name: "gemini-2.0-flash"
         system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
         api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
-        # api_url: 'http://127.0.0.1:11434/v1' # ollama
-        # api_url: 'https://generativelanguage.googleapis.com/v1beta/openai/'
         api_key: "sk-21172643eac945e1a71a154221c295a0" # default=os.getenv("DASHSCOPE_API_KEY")
-      # Dify:
-      #   enabled: True
-      #   module: llm/dify/llm_handler_dify
-      #   api_key: app-J3LiQRqh4MrOOvS6vpyrgIOW
-      #   api_url: 'http://localhost/v1'
       LAM_Driver:
         module: avatar/lam/avatar_handler_lam_audio2expression

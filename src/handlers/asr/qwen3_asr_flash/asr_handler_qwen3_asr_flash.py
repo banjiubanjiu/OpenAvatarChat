@@ -81,7 +81,8 @@ class HandlerQwen3ASR(HandlerBase):
         output_definition = output_definitions.get(ChatDataType.HUMAN_TEXT).definition
         context = cast(Qwen3ASRContext, context)
 
-        logger.info(f"Qwen3-ASR handle called with input type: {inputs.type}")
+        # This is called very frequently; use debug level to avoid log spam.
+        logger.debug(f"Qwen3-ASR handle called with input type: {inputs.type}")
 
         if inputs.type != ChatDataType.HUMAN_AUDIO:
             logger.debug(f"Skipping non-audio input: {inputs.type}")
@@ -97,7 +98,7 @@ class HandlerQwen3ASR(HandlerBase):
             return
 
         audio = audio.squeeze()
-        logger.info(f'audio in, shape={audio.shape}, speech_id={context.speech_id}')
+        logger.debug(f'audio in, shape={audio.shape}, speech_id={context.speech_id}')
 
         # Accumulate audio data
         if audio.shape[0] > 0:

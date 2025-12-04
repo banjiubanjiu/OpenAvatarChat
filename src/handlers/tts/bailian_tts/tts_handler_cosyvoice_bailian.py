@@ -38,6 +38,7 @@ class TTSContext(HandlerContext):
         self.dump_audio = False
         self.audio_dump_file = None
         self.synthesizer = None
+        self.shared_states = None
 
 
 class HandlerTTS(HandlerBase, ABC):
@@ -93,6 +94,7 @@ class HandlerTTS(HandlerBase, ABC):
         if not isinstance(handler_config, TTSConfig):
             handler_config = TTSConfig()
         context = TTSContext(session_context.session_info.session_id)
+        context.shared_states = session_context.shared_states
         context.input_text = ''
         if context.dump_audio:
             dump_file_path = os.path.join(DirectoryInfo.get_project_dir(), 'temp',
@@ -112,6 +114,16 @@ class HandlerTTS(HandlerBase, ABC):
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
         output_definition = output_definitions.get(ChatDataType.AVATAR_AUDIO).definition
         context = cast(TTSContext, context)
+        if context.shared_states and context.shared_states.interrupt_audio:
+            # 触发打断：立即结束当前合成
+            if context.synthesizer is not None:
+                try:
+                    context.synthesizer.streaming_complete()
+                except Exception as e:
+                    logger.warning(f"TTS interrupt complete failed: {e}")
+                context.synthesizer = None
+            context.shared_states.interrupt_audio = False
+            return
         if inputs.type == ChatDataType.AVATAR_TEXT:
             text = inputs.data.get_main_data()
         else:
@@ -148,6 +160,18 @@ class HandlerTTS(HandlerBase, ABC):
         context = cast(TTSContext, context)
         logger.info('destroy context')
 
+    def on_interrupt(self, session_context: SessionContext, handler_context: HandlerContext):
+        """收到打断信号时，停止当前 TTS 合成/推流"""
+        ctx = cast(TTSContext, handler_context)
+        if ctx.synthesizer is not None:
+            try:
+                ctx.synthesizer.streaming_complete()
+            except Exception as e:
+                logger.warning(f"TTS streaming_complete failed on interrupt: {e}")
+            ctx.synthesizer = None
+        if ctx.shared_states:
+            ctx.shared_states.interrupt_audio = False
+
 
 class CosyvoiceCallBack(ResultCallback):
     def __init__(self, context: TTSContext, output_definition, speech_id):
@@ -166,6 +190,17 @@ class CosyvoiceCallBack(ResultCallback):
         pass
 
     def on_data(self, data: bytes) -> None:
+        # 在音频流过程中如果收到打断标记，立即终止推流
+        if self.context.shared_states and self.context.shared_states.interrupt_audio:
+            self.context.shared_states.interrupt_audio = False
+            try:
+                if self.context.synthesizer is not None:
+                    self.context.synthesizer.streaming_complete()
+            except Exception as e:
+                logger.warning(f"TTS streaming_complete failed in on_data interrupt: {e}")
+            self.context.synthesizer = None
+            self.temp_bytes = b''
+            return
         self.temp_bytes += data
         if len(self.temp_bytes) > 24000:
             # 实现接收合成二进制音频结果的逻辑

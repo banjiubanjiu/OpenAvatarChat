@@ -261,6 +261,10 @@ class HandlerAudioVAD(HandlerBase, ABC):
                 if timestamp >= 0:
                     output_chat_data.timestamp = timestamp, sample_rate
                 yield output_chat_data
+                # 一旦检测到 human_speech_start 或有音频片段输出，触发打断信号，停止当前TTS播放
+                if context.shared_states:
+                    context.shared_states.interrupt_audio = True
+                    # 通知上层（若需要）可以扩展为 emit_signal
 
     def destroy_context(self, context: HandlerContext):
         pass

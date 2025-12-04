@@ -113,6 +113,18 @@ class RtcStream(AsyncAudioVideoStreamHandler):
                 self.first_audio_emitted = True
 
             while not self.quit.is_set():
+                # 如果有打断标记，立即清空待播音频，跳过本轮
+                if self.client_session_delegate and self.client_session_delegate.shared_states:
+                    if self.client_session_delegate.shared_states.interrupt_audio:
+                        audio_q = self.client_session_delegate.output_queues.get(EngineChannelType.AUDIO)
+                        if audio_q:
+                            while not audio_q.empty():
+                                try:
+                                    audio_q.get_nowait()
+                                except Exception:
+                                    break
+                        self.client_session_delegate.shared_states.interrupt_audio = False
+                        continue
                 chat_data = await self.client_session_delegate.get_data(EngineChannelType.AUDIO)
                 if chat_data is None or chat_data.data is None:
                     continue

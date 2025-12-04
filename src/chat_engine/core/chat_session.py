@@ -390,5 +390,14 @@ class ChatSession:
 
     def emit_signal(self, signal: ChatSignal):
         # TODO this is temp implementation a full signal infrastructure is needed.
-        if signal.source_type == ChatSignalSourceType.CLIENT and signal.type == ChatSignalType.END:
+        if signal.type == ChatSignalType.INTERRUPT:
+            # 用户打断：重开 VAD，并通知支持打断的 handler
+            self.session_context.shared_states.enable_vad = True
+            self.session_context.shared_states.interrupt_audio = True
+            for handler_record in self.handlers.values():
+                try:
+                    handler_record.env.handler.on_interrupt(self.session_context, handler_record.env.context)
+                except Exception as e:
+                    logger.warning(f"Handler {handler_record.env.handler_info.name} interrupt failed: {e}")
+        elif signal.source_type == ChatSignalSourceType.CLIENT and signal.type == ChatSignalType.END:
             self.session_context.shared_states.enable_vad = True

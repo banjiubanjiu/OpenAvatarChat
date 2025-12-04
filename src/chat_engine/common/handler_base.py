@@ -87,3 +87,7 @@ class HandlerBase(ABC):
 
     def destroy(self):
         pass
+
+    def on_interrupt(self, session_context: SessionContext, handler_context: HandlerContext):
+        """可选的打断回调，默认不处理"""
+        pass

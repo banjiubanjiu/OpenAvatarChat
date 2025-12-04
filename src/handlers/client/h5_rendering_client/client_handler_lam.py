@@ -21,6 +21,8 @@ from chat_engine.data_models.chat_data_type import ChatDataType
 from chat_engine.data_models.chat_engine_config_data import HandlerBaseConfigModel, ChatEngineConfigModel
 from chat_engine.data_models.chat_signal import ChatSignal
 from chat_engine.data_models.chat_signal_type import ChatSignalSourceType, ChatSignalType
+
+logger.warning(f"[lam_handler_import] loaded from {__file__}, ChatSignalType exists={ 'yes' if 'ChatSignalType' in globals() else 'no' }")
 from chat_engine.data_models.runtime_data.motion_data import MotionDataSerializer
 from engine_utils.directory_info import DirectoryInfo
 from handlers.client.rtc_client.client_handler_rtc import RtcClientSessionDelegate, ClientHandlerRtc, \
@@ -44,6 +46,19 @@ class LamClientSessionDelegate(RtcClientSessionDelegate):
         )
         welcome_message_sent = False
         while not self.quit.is_set():
+            # 语音打断：清空待发送的音频/动作队列
+            if self.shared_states and self.shared_states.interrupt_audio:
+                for q in [
+                    self.output_queues.get(EngineChannelType.MOTION_DATA),
+                    self.output_queues.get(EngineChannelType.AUDIO),
+                ]:
+                    if q:
+                        while not q.empty():
+                            try:
+                                q.get_nowait()
+                            except Exception:
+                                break
+                self.shared_states.interrupt_audio = False
             try:
                 chat_data: ChatData = await asyncio.wait_for(self.get_data(EngineChannelType.MOTION_DATA), timeout=0.1)
                 logger.info(f"Got chat data {str(chat_data)}")
@@ -56,8 +71,19 @@ class LamClientSessionDelegate(RtcClientSessionDelegate):
             if chat_data.type == ChatDataType.AVATAR_MOTION_DATA:
                 msg = self.motion_data_serializer.serialize(chat_data.data)
                 await websocket.send_bytes(msg)
+                try:
+                    # 当一次 avatar 说话结束时，重新打开 VAD，允许下一轮人声输入
+                    speech_end = bool(chat_data.data.get_meta("avatar_speech_end", False))
+                except Exception:
+                    speech_end = False
+                if speech_end and self.shared_states:
+                    logger.info("Avatar speech end detected, re-enabling VAD")
+                    self.shared_states.enable_vad = True
 
     async def _ws_input_task(self, websocket: WebSocket):
+        # Local import to avoid NameError if module-level import is lost in reload edge cases.
+        from chat_engine.data_models.chat_signal_type import ChatSignalType as _ChatSignalType
+        globals()["ChatSignalType"] = _ChatSignalType  # ensure global name is set even under hot reload quirks
         while not self.quit.is_set() and websocket.client_state != WebSocketState.DISCONNECTED:
             try:
                 raw_msg = await asyncio.wait_for(websocket.receive_text(), timeout=0.1)
@@ -70,7 +96,14 @@ class LamClientSessionDelegate(RtcClientSessionDelegate):
                 if msg_type == "EndSpeech":
                     signal = ChatSignal(
                         source_type=ChatSignalSourceType.CLIENT,
-                        type=ChatSignalType.END,
+                        type=_ChatSignalType.END,
+                    )
+                    self.emit_signal(signal)
+                elif msg_type == "Interrupt":
+                    # 客户端主动打断
+                    signal = ChatSignal(
+                        source_type=ChatSignalSourceType.CLIENT,
+                        type=_ChatSignalType.INTERRUPT,
                     )
                     self.emit_signal(signal)
             except Exception as e:
@@ -81,7 +114,8 @@ class LamClientSessionDelegate(RtcClientSessionDelegate):
         # TODO: this is temp implementation a full signal infrastructure is needed.
         super().emit_signal(signal)
         logger.info(signal)
-        if signal.source_type == ChatSignalSourceType.CLIENT and signal.type == ChatSignalType.END:
+        is_end = str(signal.type).lower() == "end"
+        if signal.source_type == ChatSignalSourceType.CLIENT and is_end:
             self.shared_states.enable_vad = True
 
     async def serve_websocket(self, websocket: WebSocket):

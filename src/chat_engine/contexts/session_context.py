@@ -13,6 +13,7 @@ from chat_engine.data_models.session_info_data import SessionInfoData, IOQueueTy
 class SharedStates:
     active: bool = False
     enable_vad: bool = True
+    interrupt_audio: bool = False  # 服务端打断标记，用于停止当前TTS播放/生成
 
 
 class SessionContext(object):

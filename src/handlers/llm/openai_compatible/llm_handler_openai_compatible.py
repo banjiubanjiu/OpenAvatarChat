@@ -24,6 +24,13 @@ class LLMConfig(HandlerBaseConfigModel, BaseModel):
     api_url: str = Field(default=None)
     enable_video_input: bool = Field(default=False)
     history_length: int = Field(default=20)
+    # Router configuration: use a lightweight model (e.g. tongyi-intent-detect-v3)
+    # to decide whether this turn needs vision (image) or plain text.
+    router_enabled: bool = Field(default=False)
+    router_model_name: Optional[str] = Field(default=None)
+    # Optional override models for different routes; fall back to model_name when not set.
+    text_model_name: Optional[str] = Field(default=None)
+    vision_model_name: Optional[str] = Field(default=None)
 
 
 class LLMContext(HandlerContext):
@@ -85,6 +92,7 @@ class HandlerLLM(HandlerBase, ABC):
         if not isinstance(handler_config, LLMConfig):
             handler_config = LLMConfig()
         context = LLMContext(session_context.session_info.session_id)
+        context.config = handler_config
         context.model_name = handler_config.model_name
         context.system_prompt = {'role': 'system', 'content': handler_config.system_prompt}
         context.api_key = handler_config.api_key
@@ -100,6 +108,70 @@ class HandlerLLM(HandlerBase, ABC):
     
     def start_context(self, session_context, handler_context):
         pass
+
+    def _route_model(self, context: LLMContext, chat_text: str) -> tuple[str, bool]:
+        """
+        Decide which model to use for this turn and whether to include image input.
+
+        Returns:
+            (target_model_name, use_image)
+        """
+        cfg: Optional[LLMConfig] = context.config
+        # Backwards-compatible fallback: single model, include image if available.
+        if cfg is None:
+            use_image = context.enable_video_input and context.current_image is not None
+            return context.model_name, use_image
+
+        text_model = cfg.text_model_name or cfg.model_name
+        vision_model = cfg.vision_model_name or cfg.model_name
+
+        # If router not enabled, simply use vision model when image is available.
+        if not cfg.router_enabled:
+            use_image = context.enable_video_input and context.current_image is not None
+            target_model = vision_model if use_image else text_model
+            return target_model, use_image
+
+        router_model = cfg.router_model_name or text_model
+
+        # Use a lightweight classifier model (e.g. tongyi-intent-detect-v3) to decide
+        # whether this turn requires vision. We treat it as a simple classifier:
+        # it should answer only "VISION" or "TEXT".
+        tag = "TEXT"
+        try:
+            completion = context.client.chat.completions.create(
+                model=router_model,
+                stream=False,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "你是一个意图分类器。"
+                            "如果用户这句话需要你根据摄像头画面、图片或视频来回答问题，"
+                            "例如：让你“看一下画面/照片/视频里有什么”，"
+                            "询问“我现在长什么样/好不好看/穿着怎样/你猜我多大”，"
+                            "或者问“我手上是什么/桌上有什么/画面里这些东西是什么”等，"
+                            "都判为 VISION。普通聊天、情绪表达或与画面无关的问题判为 TEXT。"
+                            "只回答 VISION 或 TEXT，不要输出其它内容。"
+                        ),
+                    },
+                    {"role": "user", "content": chat_text},
+                ],
+            )
+            tag = (completion.choices[0].message.content or "").strip().upper()
+        except Exception as e:
+            logger.warning(f"Vision router failed, fallback to TEXT: {e}")
+
+        use_image = (
+            tag == "VISION"
+            and context.enable_video_input
+            and context.current_image is not None
+        )
+        target_model = vision_model if use_image else text_model
+        logger.info(
+            f"llm router model={router_model} tag={tag} "
+            f"use_image={use_image} target_model={target_model}"
+        )
+        return target_model, use_image
 
     def handle(self, context: HandlerContext, inputs: ChatData,
                output_definitions: Dict[ChatDataType, HandlerDataInfo]):
@@ -128,13 +200,16 @@ class HandlerLLM(HandlerBase, ABC):
         chat_text = re.sub(r"<\|.*?\|>", "", chat_text)
         if len(chat_text) < 1:
             return
-        logger.info(f'llm input {context.model_name} {chat_text} ')
-        current_content = context.history.generate_next_messages(chat_text, 
-                                                                 [context.current_image] if context.current_image is not None else [])
+        target_model, use_image = self._route_model(context, chat_text)
+        logger.info(f'llm input {target_model} use_image={use_image} {chat_text} ')
+        current_content = context.history.generate_next_messages(
+            chat_text,
+            [context.current_image] if use_image else [],
+        )
         logger.debug(f'llm input {context.model_name} {current_content} ')
         try:
             completion = context.client.chat.completions.create(
-                model=context.model_name,  # 此处以qwen-plus为例，可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+                model=target_model,  # 按路由选择文本或多模态模型
                 messages=[
                     context.system_prompt,
                 ] + current_content,
@@ -179,4 +254,3 @@ class HandlerLLM(HandlerBase, ABC):
 
     def destroy_context(self, context: HandlerContext):
         pass
-
