@@ -1,0 +1,73 @@
+default:
+  logger:
+    log_level: "INFO"
+  service:
+    host: "0.0.0.0"
+    port: 8282
+    cert_file: "ssl_certs/localhost.crt"
+    cert_key: "ssl_certs/localhost.key"
+  chat_engine:
+    model_root: "models"
+    concurrent_limit: 5
+    handler_search_path:
+      - "src/handlers"
+    handler_configs:
+      LamClient:
+        module: client/h5_rendering_client/client_handler_lam
+        asset_path: "lam_samples/barbara.zip"
+        connection_ttl: 900
+      SileroVad:
+        module: vad/silerovad/vad_handler_silero
+        # 降低阈值，让较小声的语音也能被判定为“在说话”
+        speaking_threshold: 0.3
+        start_delay: 1024
+        # 翻译模式：适当拉长 end_delay，避免在句中短停顿时过早截断
+        end_delay: 12800          # 约 0.8s 静音才认为一句话结束
+        buffer_look_back: 3000
+        speech_padding: 256
+        # 同声传译场景：一次人声结束后立刻允许下一段继续被检测
+        disable_vad_after_end: false
+        # 翻译模式不需要“打断当前 TTS”，所以关闭自动 interrupt
+        enable_interrupt: false
+      Qwen3ASR:
+        enabled: false  # 翻译模式下关闭远程 Qwen3-ASR
+        module: asr/qwen3_asr_flash/asr_handler_qwen3_asr_flash
+        api_key: "sk-21172643eac945e1a71a154221c295a0"
+        model_name: "qwen3-asr-flash"
+        base_url: "https://dashscope.aliyuncs.com/api/v1"
+        sample_rate: 16000
+        language: "zh"
+        enable_itn: true
+        stream: false  # 保留配置，方便需要时再开启
+      SenseVoice:
+        enabled: true
+        module: asr/sensevoice/asr_handler_sensevoice
+        model_name: "iic/SenseVoiceSmall"
+      Translator:
+        enabled: true
+        module: translate/translator_handler
+        model_name: "qwen-mt-plus"
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+        api_key: "sk-21172643eac945e1a71a154221c295a0"
+        source_lang: "Chinese"
+        target_lang: "English"
+      LLMOpenAICompatible:
+        enabled: false
+        module: llm/openai_compatible/llm_handler_openai_compatible
+        model_name: "qwen-vl-plus"
+        router_enabled: true
+        router_model_name: "tongyi-intent-detect-v3"
+        text_model_name: "qwen-plus"
+        vision_model_name: "qwen-vl-plus"
+        enable_video_input: true
+        history_length: 20
+        system_prompt: "请你扮演一个 AI 助手，用简短的两三句对话来回答用户的问题，并在对话内容中加入合适的标点符号，不需要讨论标点符号相关的内容"
+        api_url: "https://dashscope.aliyuncs.com/compatible-mode/v1"
+      CosyVoice:
+        enabled: true
+        module: tts/bailian_tts/tts_handler_cosyvoice_bailian
+        voice: "longxiaocheng"
+        model_name: "cosyvoice-v1"
+        api_key: "sk-21172643eac945e1a71a154221c295a0"
+      LAM_Driver:
+        module: avatar/lam/avatar_handler_lam_audio2expression

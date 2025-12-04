@@ -24,6 +24,12 @@ class SileroVADConfigModel(HandlerBaseConfigModel, BaseModel):
     end_delay: int = Field(default=5000)
     buffer_look_back: int = Field(default=1024)
     speech_padding: int = Field(default=512)
+    # 是否在检测到一次 human_speech_end 后暂时关闭 VAD（通过 shared_states.enable_vad）
+    # 原设计用于避免一段话结束后立即重复触发；在同声传译场景下可以关闭，让下一段尽快被检测到。
+    disable_vad_after_end: bool = Field(default=True)
+    # 是否在检测到人声片段时触发打断标记，用于中断当前 TTS 播放。
+    # 对话场景一般需要打断；翻译场景通常不需要。
+    enable_interrupt: bool = Field(default=True)
 
 
 class SpeakingStatus(enum.Enum):
@@ -246,7 +252,11 @@ class HandlerAudioVAD(HandlerBase, ABC):
             timestamp = extra_args.get("head_sample_id", head_sample_id)
             speech_id = f"speech-{context.session_id}-{context.speech_id}"
             if human_speech_end:
-                context.shared_states.enable_vad = False
+                # 在部分场景下（如对话模式），可以通过配置保持原有行为：在一次人声结束后暂时关闭 VAD，
+                # 等到下游（例如 Avatar 说完话）再重新打开。
+                # 在同声传译场景下，为了尽快监听下一段人声，可以配置为不关闭 VAD。
+                if context.config.disable_vad_after_end and context.shared_states:
+                    context.shared_states.enable_vad = False
                 context.reset()
             if audio_clip is not None:
                 output = DataBundle(output_definition)
@@ -262,7 +272,7 @@ class HandlerAudioVAD(HandlerBase, ABC):
                     output_chat_data.timestamp = timestamp, sample_rate
                 yield output_chat_data
                 # 一旦检测到 human_speech_start 或有音频片段输出，触发打断信号，停止当前TTS播放
-                if context.shared_states:
+                if context.config.enable_interrupt and context.shared_states:
                     context.shared_states.interrupt_audio = True
                     # 通知上层（若需要）可以扩展为 emit_signal
 

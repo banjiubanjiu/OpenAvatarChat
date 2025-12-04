@@ -262,11 +262,16 @@ class HandlerQwen3ASR(HandlerBase):
                     choice = output["choices"][0]
                     if "message" in choice and "content" in choice["message"]:
                         content_list = choice["message"]["content"]
+                        # 将所有 text 片段拼接，避免只取第一段导致识别残缺
+                        text_segments = []
                         for content in content_list:
-                            if "text" in content:
-                                transcript = content["text"]
-                                logger.info(f"Extracted transcript: {transcript}")
-                                return transcript
+                            segment = content.get("text")
+                            if segment:
+                                text_segments.append(segment)
+                        transcript = "".join(text_segments).strip()
+                        if transcript:
+                            logger.info(f"Extracted transcript: {transcript}")
+                            return transcript
                 elif "text" in output:
                     # Direct text format
                     transcript = output["text"]
@@ -322,6 +327,10 @@ class HandlerQwen3ASR(HandlerBase):
         try:
             for resp in response_stream:
                 try:
+                    # 某些流式事件可能返回 None，直接跳过
+                    if resp is None:
+                        logger.warning("Qwen3-ASR streaming received None response, skipping.")
+                        continue
                     output = resp.get("output", {})
                     choices = output.get("choices", [])
                     if not choices:

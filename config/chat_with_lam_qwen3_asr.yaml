@@ -33,7 +33,7 @@ default:
         sample_rate: 16000
         language: "zh"
         enable_itn: true  # 数字转文字
-        stream: true     # 启用流式输出，支持更早出字从而实现对话打断
+        stream: false    # 关闭流式，使用同步识别以保证稳定性
       CosyVoice:
         enabled: True
         module: tts/bailian_tts/tts_handler_cosyvoice_bailian
