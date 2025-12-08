@@ -7,7 +7,7 @@ import sys
 import gradio
 import uvicorn
 from fastapi import FastAPI
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from loguru import logger
 
 from engine_utils.directory_info import DirectoryInfo
@@ -50,6 +50,13 @@ class OpenAvatarChatWebServer(uvicorn.Server):
 
 def setup_demo():
     app = FastAPI(docs_url=None, redoc_url=None)
+
+    # Serve favicon to avoid 404 logs for /favicon.ico
+    favicon_path = os.path.join(DirectoryInfo.get_project_dir(), "favicon.ico")
+    if os.path.isfile(favicon_path):
+        @app.get("/favicon.ico", include_in_schema=False)
+        async def favicon():
+            return FileResponse(favicon_path)
 
     css = """
 

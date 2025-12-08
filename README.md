@@ -858,6 +858,38 @@ source .venv/bin/activate
 unset http_proxy https_proxy HTTP_PROXY HTTPS_PROXY all_proxy ALL_PROXY
 uv run src/demo.py --config config/chat_with_lam.yaml
 
+## 快速启动：中译英实时翻译智能体
+
+项目内自带了一个“中文 → 英文”同声传译配置 `config/chat_with_lam_qwen3_asr_translate.yaml`，可以通过快捷脚本一键启动。
+
+1. 在项目根目录配置百炼 DashScope 的 API Key（翻译与 TTS 都会用到）：
+   ```bash
+   cd ~/code/OpenAvatarChat
+   touch .env
+   echo 'DASHSCOPE_API_KEY=你的DashScope密钥' >> .env
+   ```
+
+2. 使用快捷脚本启动翻译模式（脚本会自动关闭代理环境变量，避免 httpx 代理报错）：
+   ```bash
+   cd ~/code/OpenAvatarChat
+   bash scripts/run_hot.sh
+   ```
+   - 不带参数时，默认使用 `config/chat_with_lam_qwen3_asr_translate.yaml`（中译英实时翻译）。
+   - 如需切换为原始对话模式，可以显式指定配置：
+     ```bash
+     bash scripts/run_hot.sh config/chat_with_lam_qwen3_asr.yaml
+     ```
+
+3. 启动成功后，在浏览器中访问服务：
+   ```text
+   http://localhost:8282/
+   ```
+   如果你在配置文件中提供了有效的 `ssl_certs/localhost.crt` 与 `ssl_certs/localhost.key`，则可通过：
+   ```text
+   https://localhost:8282/
+   ```
+   访问页面，并在浏览器中授权麦克风/摄像头后体验中文 → 英文实时翻译数字人。
+
 ## 社区贡献-感谢
 
 - 感谢社区热心同学“十字鱼”在B站上发布的一键安装包视频，并提供了下载（解压码在视频简介里面有,仔细找找）[一键包](https://www.bilibili.com/video/BV1V1oLYmEu3/?vd_source=29463f5b63a3510553325ba70f325293)

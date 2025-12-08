@@ -388,6 +388,39 @@ uv run install.py --uv --config <absolute path to config file>.yaml
 uv run src/demo.py --config <absolute path to config file>.yaml
 ```
 
+## Quick Start: Real-Time Chinese → English Translation Agent
+
+The project includes a built-in configuration for “Chinese → English” simultaneous interpretation: `config/chat_with_lam_qwen3_asr_translate.yaml`.  
+You can launch it with a single shortcut script.
+
+1. Configure your Alibaba Cloud BaiLian DashScope API Key in the project root (used by the Translator and CosyVoice TTS):
+   ```bash
+   cd ~/code/OpenAvatarChat
+   touch .env
+   echo 'DASHSCOPE_API_KEY=your_dashscope_api_key' >> .env
+   ```
+
+2. Use the shortcut script to start the translation mode (the script temporarily clears proxy-related environment variables to avoid httpx proxy errors):
+   ```bash
+   cd ~/code/OpenAvatarChat
+   bash scripts/run_hot.sh
+   ```
+   - Without arguments, it uses `config/chat_with_lam_qwen3_asr_translate.yaml` by default (Chinese → English real-time translation).
+   - To switch back to the original LAM dialogue mode, explicitly pass the config file:
+     ```bash
+     bash scripts/run_hot.sh config/chat_with_lam_qwen3_asr.yaml
+     ```
+
+3. After the service starts successfully, open the UI in your browser:
+   ```text
+   http://localhost:8282/
+   ```
+   If you have provided a valid `ssl_certs/localhost.crt` and `ssl_certs/localhost.key` in the config, you can access via:
+   ```text
+   https://localhost:8282/
+   ```
+   Then grant microphone/camera permissions in your browser to experience the real-time Chinese → English translation digital human.
+
 ### Docker Execution
 > [!Note] 
 Containerized execution: The container relies on NVIDIA's container environment. After preparing a Docker environment that supports GPUs, execute the following command to complete the construction and deployment of the image:
